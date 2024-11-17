@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row align-items-center justify-content-center">
+    <form class="col-md-6 border shadow-sm p-3" 
+		method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <h2>Cadastrar Funcionário</h2>
+        {{form.errors}}
+        {{form}}
+        <button class="btn btn-outline-primary mt-3" 
+			type="submit">Salvar e continuar</button>
+    </form>
+</div>
+{% endblock %}
