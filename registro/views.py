@@ -9,7 +9,7 @@ camera_detection = VideoCamera()  # Instância da classe VideoCamera
 # Captura o frame com face detectada
 def gen_detect_face(camera_detection):
     while True:
-        frame = camera_detection.get_camera()  
+        frame = camera_detection.detect_face()  
         if frame is None:
             continue
         yield (b'--frame\r\n'
