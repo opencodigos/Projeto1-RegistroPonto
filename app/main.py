@@ -1,15 +1,82 @@
+import cv2 
+from datetime import datetime
+
 from kivymd.app import MDApp
 from kivy.lang import Builder
-from kivymd.uix.screen import MDScreen
+from kivy.uix.image import Image 
+from kivy.graphics.texture import Texture 
+from kivy.clock import Clock 
 from kivy.uix.screenmanager import ScreenManager
 from kivy.core.window import Window
 
-from datetime import datetime
-
-Window.size = (340, 680)
-
+from kivymd.uix.boxlayout import MDBoxLayout  
+from kivymd.uix.label import MDLabel
+from kivymd.uix.screen import MDScreen 
+ 
+Window.size = (340, 680)  
 
 class MainScreen(MDScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)  # Chama o construtor da classe Screen
+
+        layout = MDBoxLayout(orientation="vertical", 
+                             pos_hint={"center_x": 0.5, 
+                                       "center_y": 0.6})
+        self.add_widget(layout)  # Adiciona o layout à tela
+
+        # Adiciona o widget de imagem
+        self.image = Image()
+        layout.add_widget(self.image)
+
+        # TODO: Baixar o modelo de treinamento e carregar no reconhecedor
+ 
+    def load_video(self, *args):
+        ret, frame = self.cap.read()
+        if not ret:
+            print("Falha ao capturar o frame")
+            return
+
+        # Defina a região de interesse (ROI) onde o rosto será detectado
+        altura, largura, _ = frame.shape
+        centro_x, centro_y = int(largura / 2), int(altura / 2)
+        a, b = 140, 180  # Ajuste o tamanho da elipse conforme necessário
+        x1, y1 = centro_x - a, centro_y - b
+        x2, y2 = centro_x + a, centro_y + b 
+
+        # Desenha a elipse na ROI
+        cv2.ellipse(frame, (centro_x, centro_y), (a, b), 0, 0, 360, (144, 238, 144), 6)
+
+        # Exibe a imagem capturada com a elipse
+        buffer = cv2.flip(frame, 0).tobytes()
+        texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt="bgr")
+        texture.blit_buffer(buffer, colorfmt="bgr", bufferfmt="ubyte")
+        self.image.texture = texture
+
+        # TODO: Adicionar lógica de reconhecimento facial dentro da ROI
+    
+    # Quando usuario clica no botão "Registrar"
+    def open_camera_for_recognition(self):
+        # Oculta a imagem principal
+        self.ids.headimage.opacity = 0
+
+        # Remove a mensagem (opcional)
+        for widget in self.children:
+            if isinstance(widget, MDLabel):
+                self.remove_widget(widget)
+
+        # Inicia a captura de vídeo
+        self.cap = cv2.VideoCapture(0)  # index 0 para a câmera padrão
+        if self.cap.isOpened():
+            print("Câmera aberta")
+
+            # Agenda a função para carregar o vídeo
+            Clock.schedule_interval(self.load_video, 1.0 / 60.0)
+
+            # TODO: Agendar o início do reconhecimento facial após 5 segundos
+
+        else:
+            print("Falha ao abrir a câmera")
+        
     def show_recognized_user(self):
 
         # Navegar para a tela 'usuario' usando self.manager
@@ -44,9 +111,9 @@ class ComprovanteScreen(MDScreen):
 
 
 class ScreenManagerApp(ScreenManager):
-    def show_recognized_user(self):
+    def open_camera_for_recognition(self):
         # Chama o método de MainScreen para abrir a câmera
-        self.get_screen('main').show_recognized_user()
+        self.get_screen('main').open_camera_for_recognition()
 
 
 class MainApp(MDApp):
@@ -88,7 +155,7 @@ ScreenManagerApp:
             md_bg_color: 1, 0.388, 0.278, 1
             size_hint: (0.7, 0.1)  
             elevation: 0.5   
-            on_press: root.show_recognized_user()
+            on_press: root.open_camera_for_recognition()
         
 <UsuarioScreen>:
     name: "usuario"
