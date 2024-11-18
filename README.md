@@ -1,2 +1,5 @@
-# Projeto1-registroponto
-Sistema de Registro de ponto por reconhecimento Facial
+# Projeto Registro de Ponto por reconhecimento Facial
+
+- Servidor (Django)
+
+- Aplicação Mobile (Kivy)
