@@ -1,4 +1,7 @@
-import cv2 
+import cv2  
+import tempfile
+import requests
+import os
 from datetime import datetime
 
 from kivymd.app import MDApp
@@ -17,8 +20,11 @@ Window.size = (340, 680)
 
 class MainScreen(MDScreen):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)  # Chama o construtor da classe Screen
-
+        super().__init__(**kwargs)  # Chama o construtor da classe Screen 
+        self.recognized_user = None # Retorna usuario
+        self.recognized = False # status do reconhecimento
+        self.recognition_enabled = False  # Variável para controlar o início do reconhecimento (talvez utilizaremos)
+ 
         layout = MDBoxLayout(orientation="vertical", 
                              pos_hint={"center_x": 0.5, 
                                        "center_y": 0.6})
@@ -28,7 +34,25 @@ class MainScreen(MDScreen):
         self.image = Image()
         layout.add_widget(self.image)
 
-        # TODO: Baixar o modelo de treinamento e carregar no reconhecedor
+        tmp_dir = "./tmp"
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        # Carrega o classificador frontal do OpenCV
+        self.face_cascade = cv2.CascadeClassifier("./lib/haarcascade_frontalface_default.xml")
+        self.reconhecedor = cv2.face.EigenFaceRecognizer_create()
+
+        # Baixa o modelo de treinamento e carrega no reconhecedor
+        treinamento = requests.get("http://127.0.0.1:8000/api/treinamento/").json()
+        model_url = treinamento[0]['modelo']  # Pega o primeiro item da lista
+        
+        # Caminho do arquivo temporário no diretório local
+        tmp_path = os.path.join(tmp_dir, "modelo.xml")
+        
+        # Salva o modelo no diretório tmp
+        with open(tmp_path, "wb") as temp_file:
+            temp_file.write(requests.get(model_url).content)
+            self.reconhecedor.read(temp_file.name)  # Carrega o modelo no reconhecedor
+        
  
     def load_video(self, *args):
         ret, frame = self.cap.read()
@@ -41,8 +65,8 @@ class MainScreen(MDScreen):
         centro_x, centro_y = int(largura / 2), int(altura / 2)
         a, b = 140, 180  # Ajuste o tamanho da elipse conforme necessário
         x1, y1 = centro_x - a, centro_y - b
-        x2, y2 = centro_x + a, centro_y + b 
-
+        x2, y2 = centro_x + a, centro_y + b  
+        
         # Desenha a elipse na ROI
         cv2.ellipse(frame, (centro_x, centro_y), (a, b), 0, 0, 360, (144, 238, 144), 6)
 
@@ -52,7 +76,35 @@ class MainScreen(MDScreen):
         texture.blit_buffer(buffer, colorfmt="bgr", bufferfmt="ubyte")
         self.image.texture = texture
 
-        # TODO: Adicionar lógica de reconhecimento facial dentro da ROI
+        roi = frame[y1:y2, x1:x2]  # Extraí a região de interesse 
+        
+        # Adicionar lógica de reconhecimento facial dentro da ROI
+        imagemCinza = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        facesDetectadas = self.face_cascade.detectMultiScale(imagemCinza, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+        # Para cada rosto detectado, realiza o reconhecimento facial
+        for (x, y, w, h) in facesDetectadas:
+            imagemFace = cv2.resize(imagemCinza[y:y+h, x:x+w], (220, 220)) 
+            
+            label, confianca = self.reconhecedor.predict(imagemFace) 
+            print(f"ID reconhecido: {label}")
+
+            # Exibe o resultado do reconhecimento no frame
+            if label: 
+                # Obtém dados do funcionário
+                response = requests.get(f"http://127.0.0.1:8000/api/funcionarios/{label}/")
+                if response.status_code == 200: # Retorno é OK,
+                    funcionario = response.json()
+                    print(funcionario)
+            
+                # TODO: Enviar dados para UsuarioScreen após reconhecimento
+	         
+                Clock.unschedule(self.load_video) # Interrompe o loop após identificação (senão fica printando infinitamente)
+	    
+	            # TODO: Liberar a camera depois de utilizar para primeiro reconhecimento 
+
+            break  # Interrompe o loop após o primeiro rosto reconhecido, se necessário  
+        
     
     # Quando usuario clica no botão "Registrar"
     def open_camera_for_recognition(self):
