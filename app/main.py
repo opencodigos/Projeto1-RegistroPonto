@@ -100,11 +100,20 @@ class MainScreen(MDScreen):
                 # TODO: Enviar dados para UsuarioScreen após reconhecimento
 	         
                 Clock.unschedule(self.load_video) # Interrompe o loop após identificação (senão fica printando infinitamente)
-	    
-	            # TODO: Liberar a camera depois de utilizar para primeiro reconhecimento 
 
+                # Liberar a camera depois de utilizar o reconhecimento 
+                self.reset_camera()
+                
             break  # Interrompe o loop após o primeiro rosto reconhecido, se necessário  
-        
+    
+    def reset_camera(self):
+        # Restaura a opacidade da imagem inicial e libera a câmera
+        self.ids.headimage.opacity = 1  # Restaura a opacidade da imagem inicial
+
+        # Libera o recurso da câmera e remove a textura
+        if self.cap:
+            self.cap.release()  # Libera a câmera
+        self.image.texture = None   
     
     # Quando usuario clica no botão "Registrar"
     def open_camera_for_recognition(self):
