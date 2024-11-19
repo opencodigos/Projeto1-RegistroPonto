@@ -76,6 +76,11 @@ class MainScreen(MDScreen):
         texture.blit_buffer(buffer, colorfmt="bgr", bufferfmt="ubyte")
         self.image.texture = texture
 
+        # Clock 5 segundos
+        if not self.recognition_enabled: 
+            return # False
+        
+        # True
         roi = frame[y1:y2, x1:x2]  # Extraí a região de interesse 
         
         # Adicionar lógica de reconhecimento facial dentro da ROI
@@ -94,11 +99,11 @@ class MainScreen(MDScreen):
                 # Obtém dados do funcionário
                 response = requests.get(f"http://127.0.0.1:8000/api/funcionarios/{label}/")
                 if response.status_code == 200: # Retorno é OK,
-                    funcionario = response.json()
-                    print(funcionario)
-            
-                # TODO: Enviar dados para UsuarioScreen após reconhecimento
-	         
+                    funcionario = response.json()   
+                    
+                # Enviar dados para UsuarioScreen após reconhecimento
+                self.show_recognized_user(funcionario)	
+                         
                 Clock.unschedule(self.load_video) # Interrompe o loop após identificação (senão fica printando infinitamente)
 
                 # Liberar a camera depois de utilizar o reconhecimento 
@@ -133,24 +138,20 @@ class MainScreen(MDScreen):
             # Agenda a função para carregar o vídeo
             Clock.schedule_interval(self.load_video, 1.0 / 60.0)
 
-            # TODO: Agendar o início do reconhecimento facial após 5 segundos
-
+            # Agendar o início do reconhecimento facial após 5 segundos
+            Clock.schedule_once(self.start_recognition, 5)   
+              
         else:
             print("Falha ao abrir a câmera")
-        
-    def show_recognized_user(self):
-
-        # Navegar para a tela 'usuario' usando self.manager
-        self.manager.current = 'usuario'
-
-        # Define informações fictícias para exibição
-        funcionario = {
-            "foto": "./assets/teste.jpg",
-            "nome": "Letícia Lima",
-            "cpf": "123.456.789-00",
-        }
-
+    
+    def start_recognition(self, *args):
+        # Ativa o reconhecimento após o tempo de espera
+        self.recognition_enabled = True  
+      
+    def show_recognized_user(self, funcionario):
         print(funcionario)
+        # Navegar para a tela 'usuario' usando self.manager
+        self.manager.current = 'usuario' 
 
         # Atribui os valores aos widgets na tela UsuarioScreen
         usuario_screen = self.manager.get_screen('usuario')
@@ -279,8 +280,10 @@ ScreenManagerApp:
             size_hint: (0.7, 0.1)
             elevation: 0.5   
             md_bg_color: 0.9, 0.3, 0.3, 1
-            on_press: root.manager.current = 'main'
-                    
+            on_press: 
+                root.manager.current = 'main'
+                root.manager.get_screen('main').reset_camera()
+                
 <ComprovanteScreen>:
     name: "comprovante"
     MDScreen: 
@@ -313,7 +316,9 @@ ScreenManagerApp:
             md_bg_color: 1, 0.388, 0.278, 1
             size_hint: (0.7, 0.1)   
             elevation: 0.5    
-            on_press: root.manager.current = 'main' 
+            on_press:
+                root.manager.current = 'main'
+                root.manager.get_screen('main').reset_camera()
 """)
 
 
