@@ -160,12 +160,49 @@ class MainScreen(MDScreen):
         usuario_screen.ids.cpf.text = f"CPF: {funcionario['cpf']}"
         usuario_screen.ids.data_hora.text = f"Data e Hora: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
 
+        usuario_screen.funcionario_id = funcionario["id"] # ID funcionario
+        usuario_screen.data_hora = datetime.now().isoformat() # Data Hora atual do reconhecimento
+        
         # Torna o cartão visível na tela 'usuario'
         usuario_screen.ids.card.opacity = 1
 
 
 class UsuarioScreen(MDScreen):
-    pass
+    def confirmar_registro(self):
+        if not self.funcionario_id:
+            print("Funcionário não definido.")
+            return
+        
+        funcionario = {
+            "funcionario": self.funcionario_id, # Envia o ID para API
+            "data_hora": self.data_hora # Data
+        } 
+        print(funcionario)
+        
+        url_api = "http://127.0.0.1:8000/api/registros/"
+
+        try:
+            response = requests.post(url_api, json=funcionario)
+            
+            if response.status_code == 201:
+                print("Registro salvo com sucesso!") 
+                
+                comprovante_screen = self.manager.get_screen('comprovante') 
+                 
+                mensagem = f"Matricula: {self.funcionario_id}\n{self.ids.data_hora.text}\n\nRegistro salvo com sucesso!\n"
+                
+                comprovante_screen.ids.comprovante_label.text = mensagem
+                
+                
+                
+                # Navegar para a tela de comprovante
+                self.manager.current = 'comprovante'
+                
+            else:
+                print("Erro ao salvar registro:", response.json())
+                
+        except Exception as e:
+            print("Erro na conexão com a API:", e)
 
 
 class ComprovanteScreen(MDScreen):
@@ -272,7 +309,7 @@ ScreenManagerApp:
             size_hint: (0.7, 0.1)
             elevation: 0.5   
             md_bg_color: 0.298, 0.686, 0.314, 1
-            on_press: root.manager.current = 'comprovante' 
+            on_press: root.confirmar_registro()
         MDRaisedButton:
             text: 'Não sou eu'
             font_size: '20sp'
@@ -307,8 +344,11 @@ ScreenManagerApp:
                 padding: "10dp"
                 spacing: "10dp" 
                 MDLabel:
+                    id: comprovante_label
                     text: 'Comprovante'
                     halign: 'center'
+                    theme_text_color: "Primary"
+                    font_style: "H6"
         MDRaisedButton:
             text: 'Fechar' 
             font_size: '20sp'
