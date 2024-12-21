@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from registro.models import Funcionario, Treinamento
+from registro.models import Funcionario, Treinamento, RegistroFuncionario
 
 class FuncionarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -10,3 +10,8 @@ class TreinamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Treinamento
         fields = ['id', 'modelo']
+ 
+class RegistroFuncionarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegistroFuncionario
+        fields = ['funcionario', 'data_hora']

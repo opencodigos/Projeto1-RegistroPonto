@@ -38,3 +38,10 @@ class Treinamento(models.Model):
         model = self.__class__
         if model.objects.exclude(id=self.id).exists():
             raise ValidationError('Só pode haver um arquivo salvo.')
+         
+class RegistroFuncionario(models.Model):
+    funcionario = models.ForeignKey(Funcionario, on_delete=models.CASCADE)
+    data_hora = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.funcionario.nome} - {self.data_hora}"

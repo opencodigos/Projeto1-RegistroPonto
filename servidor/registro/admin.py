@@ -1,6 +1,6 @@
 from django.contrib import admin
 from registro.models import (
-    Funcionario, ColetaFaces, Treinamento)
+    Funcionario, ColetaFaces, Treinamento, RegistroFuncionario)
  
 class ColetaFacesInline(admin.StackedInline): 
     model = ColetaFaces
@@ -16,3 +16,5 @@ admin.site.register(Funcionario, FuncionarioAdmin)
 # admin.site.register(ColetaFaces) 
 
 admin.site.register(Treinamento)
+
+admin.site.register(RegistroFuncionario)
