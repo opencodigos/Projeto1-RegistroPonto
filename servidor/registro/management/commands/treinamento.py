@@ -55,10 +55,14 @@ class Command(BaseCommand):
             print(f"{len(faces)} imagens treinadas com sucesso.")
 
             # Salva o modelo treinado em um arquivo temporário
-            model_filename = "/tmp/classificadorEigen.yml"
+            tmp_dir = "./tmp"
+            os.makedirs(tmp_dir, exist_ok=True) 
+            
+            model_filename = os.path.join(tmp_dir, "classificadorEigen.xml")
+            
             eigenFace.write(model_filename)
 
-            # Salva o modelo no banco de dados
+            # Salva o modelo no banco de dados 
             with open(model_filename, 'rb') as f:
                 treinamento, created = Treinamento.objects.get_or_create()
                 treinamento.modelo.save('classificadorEigen.yml', File(f))
