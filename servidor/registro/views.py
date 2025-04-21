@@ -39,7 +39,7 @@ def criar_funcionario(request):
 # Cria uma função para extrair e retornar o file_path
 def extract(camera_detection, funcionario_slug):
     amostra = 0 # Amostras inicial
-    numeroAmostras = 10 # Numero de Amostra para extrair
+    numeroAmostras = 20 # Numero de Amostra para extrair
     largura, altura = 220, 220  # largura, altura forma quadradinho
     file_paths = [] # lista de path das amostras 
 

@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def reconhecer_faces(self): 
         face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-        reconhecedor = cv2.face.EigenFaceRecognizer_create()
+        reconhecedor = cv2.face.LBPHFaceRecognizer_create(radius=2, neighbors=12, grid_x=8, grid_y=8)
 
         # Carregar o modelo de treinamento
         treinamento = Treinamento.objects.first()
@@ -24,6 +24,10 @@ class Command(BaseCommand):
         reconhecedor.read(model_path) 
 
         camera = cv2.VideoCapture(0)
+        if not camera.isOpened():
+            print("Unable to open camera")
+            exit()
+            
         largura, altura = 220, 220
         font = cv2.FONT_HERSHEY_COMPLEX_SMALL 
         
@@ -38,15 +42,35 @@ class Command(BaseCommand):
             faces_detectadas = face_cascade.detectMultiScale(imagemCinza, minNeighbors=20, minSize=(30, 30), maxSize=(400, 400))
 
             for (x,y,l,a) in faces_detectadas:
-                imagemFace = cv2.resize(imagemCinza[y:y+a,x:x+l], (largura, altura))  
-                cv2.rectangle(frame,(x,y),(x+l,y+a),(0,255,0),2)
-                label, result = reconhecedor.predict(imagemFace)  
-                print(label)
-                funcionario = Funcionario.objects.get(id=label)
-                if funcionario:   
-                    cv2.putText(frame, str(funcionario.nome).strip("(),'"), (x, y + a + 30), font, 1, (0, 255, 0), 2)
+                # imagemFace = imagemCinza[y-10:y+a+10, x-10:x+l+10]
+                
+                imagemFace = imagemCinza[y:y+a, x:x+l]
+                if imagemFace.size == 0:
+                    continue
+                imagemFace = cv2.resize(imagemFace, (largura, altura))
+
+                imagemFace = cv2.resize(imagemFace, (largura, altura))
+                
+                # Aplicar mesmo pré-processamento usado no treinamento
+                imagemFace = cv2.equalizeHist(imagemFace)
+                imagemFace = cv2.normalize(imagemFace, None, 0, 255, cv2.NORM_MINMAX)
+                
+                cv2.rectangle(frame,(x,y),(x+l,y+a),(0,255,0),2) 
+                label, confidence = reconhecedor.predict(imagemFace)
+                
+                # Só mostrar reconhecimento se confiança for boa
+                if confidence < 50:  # ajuste este valor conforme necessário
+                    try:
+                        funcionario = Funcionario.objects.get(id=label)
+                        nome = str(funcionario.nome).strip("(),'")
+                        conf = f"{nome} ({int(confidence)})"
+                        cv2.putText(frame, conf, (x, y + a + 30), font, 1, (0, 255, 0), 2)
+                    except Funcionario.DoesNotExist:
+                        cv2.putText(frame, "Desconhecido", (x, y + a + 30), font, 1, (0, 0, 255), 2)
                 else:
-                    cv2.putText(frame, "Nenhum user encontrado", (x, y + a + 30), font, 1, (0, 0, 255), 2)
+                    cv2.putText(frame, f"Conf: {int(confidence)}", (x, y + a + 50), font, 1, (255, 255, 0), 2)
+
+                    # cv2.putText(frame, "Baixa confiança", (x, y + a + 30), font, 1, (0, 0, 255), 2)
  
             cv2.imshow("Reconhecimento Facial", frame)
 
